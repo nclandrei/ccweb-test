@@ -154,11 +154,11 @@ fi
 # ── Zig ──────────────────────────────────────────────────────────────────────
 if ! _installed zig; then
   t=$(date +%s)
-  ZIG_VERSION="0.14.1"
+  ZIG_VERSION="0.15.2"
   echo "Installing Zig ${ZIG_VERSION}..."
-  curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz" \
+  curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" \
     | tar -C /usr/local -xJf -
-  ln -sf /usr/local/zig-linux-x86_64-${ZIG_VERSION}/zig /usr/local/bin/zig
+  ln -sf /usr/local/zig-x86_64-linux-${ZIG_VERSION}/zig /usr/local/bin/zig
   _timer "Zig ${ZIG_VERSION}" "$t"
 fi
 
@@ -166,12 +166,9 @@ fi
 if ! _installed dotnet; then
   t=$(date +%s)
   echo "Installing .NET SDK..."
-  apt-get update -qq
-  apt-get install -y -qq --no-install-recommends dotnet-sdk-8.0 2>/dev/null \
-    || {
-      curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 2>/dev/null || true
-      [ -f /root/.dotnet/dotnet ] && ln -sf /root/.dotnet/dotnet /usr/local/bin/dotnet
-    }
+  # Use the official install script — works on all Ubuntu versions reliably
+  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel STS 2>/dev/null || true
+  [ -f /root/.dotnet/dotnet ] && ln -sf /root/.dotnet/dotnet /usr/local/bin/dotnet
   _timer ".NET" "$t"
 fi
 
@@ -200,13 +197,14 @@ fi
 
 # ── Node.js package managers ────────────────────────────────────────────────
 t=$(date +%s)
-NPM_GLOBAL_BIN="$(npm config get prefix 2>/dev/null)/bin"
-_installed pnpm || npm install -g pnpm 2>/dev/null || true
-_installed yarn || npm install -g yarn 2>/dev/null || true
-for bin in pnpm pnpx yarn yarnpkg; do
-  [ -f "${NPM_GLOBAL_BIN}/${bin}" ] && [ ! -e "/usr/local/bin/${bin}" ] \
-    && ln -sf "${NPM_GLOBAL_BIN}/${bin}" "/usr/local/bin/${bin}"
-done
+if _installed corepack; then
+  corepack enable 2>/dev/null || true
+  _installed pnpm || corepack prepare pnpm@latest --activate 2>/dev/null || true
+  _installed yarn || corepack prepare yarn@latest --activate 2>/dev/null || true
+else
+  _installed pnpm || npm install -g pnpm 2>/dev/null || true
+  _installed yarn || npm install -g yarn 2>/dev/null || true
+fi
 _timer "JS package managers" "$t"
 
 # ── Persist environment variables ────────────────────────────────────────────
@@ -214,18 +212,20 @@ MARKER="# === claude-code-setup ==="
 if ! grep -q "$MARKER" /etc/environment 2>/dev/null; then
   cat >> /etc/environment <<ENVEOF
 ${MARKER}
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM:-}
-PUPPETEER_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM:-}
 PUPPETEER_SKIP_DOWNLOAD=true
-CHROME_BIN=${PLAYWRIGHT_CHROMIUM:-}
 GOPATH=/root/go
-DOTNET_ROOT=/usr/lib/dotnet
+DOTNET_ROOT=/root/.dotnet
 ENVEOF
+  if [ -n "${PLAYWRIGHT_CHROMIUM:-}" ]; then
+    echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM}" >> /etc/environment
+    echo "PUPPETEER_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM}" >> /etc/environment
+    echo "CHROME_BIN=${PLAYWRIGHT_CHROMIUM}" >> /etc/environment
+  fi
   echo 'PATH="/root/.cargo/bin:/root/.local/bin:/root/.deno/bin:/usr/local/go/bin:/root/go/bin:/root/.dotnet:${PATH}"' >> /etc/environment
 fi
 
 export GOPATH=/root/go
-export DOTNET_ROOT=/usr/lib/dotnet
+export DOTNET_ROOT=/root/.dotnet
 export PATH="/root/.cargo/bin:/root/.local/bin:/root/.deno/bin:/usr/local/go/bin:/root/go/bin:/root/.dotnet:$PATH"
 
 

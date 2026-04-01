@@ -55,6 +55,13 @@ if [ -z "$PLAYWRIGHT_CHROMIUM" ]; then
   PLAYWRIGHT_CHROMIUM=$(find /root/.cache/ms-playwright -name "headless_shell" -path "*/chrome-linux/headless_shell" 2>/dev/null | head -1)
 fi
 
+# Symlink to standard PATH locations so tools find Chromium without env vars
+if [ -n "$PLAYWRIGHT_CHROMIUM" ]; then
+  ln -sf "$PLAYWRIGHT_CHROMIUM" /usr/local/bin/chromium
+  ln -sf "$PLAYWRIGHT_CHROMIUM" /usr/local/bin/google-chrome
+  ln -sf "$PLAYWRIGHT_CHROMIUM" /usr/local/bin/chromium-browser
+fi
+
 # Move mismatched pre-installed chromedriver aside
 for p in /opt/node22/bin/chromedriver /opt/node20/bin/chromedriver; do
   [ -f "$p" ] && [ ! -f "${p}.orig" ] && mv "$p" "${p}.orig"

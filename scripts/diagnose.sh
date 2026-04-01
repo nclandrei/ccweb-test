@@ -71,7 +71,7 @@ echo ""
 echo "Browser Automation"
 CHROMIUM=$(find /root/.cache/ms-playwright -name "chrome" -path "*/chrome-linux/chrome" 2>/dev/null | head -1)
 [ -n "$CHROMIUM" ] && ok "Playwright Chromium: $CHROMIUM" || fail "Playwright Chromium: not found"
-[ -n "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ] && ok "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH set" || warn "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH not set"
+command -v chromium &>/dev/null && ok "chromium symlink: $(which chromium)" || warn "chromium not on PATH"
 
 echo ""
 echo "Setup Status"

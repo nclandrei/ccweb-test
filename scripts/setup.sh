@@ -197,14 +197,15 @@ fi
 
 # ── Node.js package managers ────────────────────────────────────────────────
 t=$(date +%s)
-if _installed corepack; then
-  corepack enable 2>/dev/null || true
-  _installed pnpm || corepack prepare pnpm@latest --activate 2>/dev/null || true
-  _installed yarn || corepack prepare yarn@latest --activate 2>/dev/null || true
-else
-  _installed pnpm || npm install -g pnpm 2>/dev/null || true
-  _installed yarn || npm install -g yarn 2>/dev/null || true
-fi
+# Ensure npm global bin is on PATH for this script
+NPM_PREFIX="$(npm config get prefix 2>/dev/null)"
+export PATH="${NPM_PREFIX}/bin:${PATH}"
+_installed pnpm || npm install -g pnpm || true
+_installed yarn || npm install -g yarn || true
+for bin in pnpm pnpx yarn yarnpkg; do
+  SRC="${NPM_PREFIX}/bin/${bin}"
+  [ -f "$SRC" ] && [ ! -e "/usr/local/bin/${bin}" ] && ln -sf "$SRC" "/usr/local/bin/${bin}"
+done
 _timer "JS package managers" "$t"
 
 # ── Persist environment variables ────────────────────────────────────────────

@@ -25,6 +25,14 @@ fi
 # Source persisted env vars from setup.sh
 set -a; source /etc/environment 2>/dev/null || true; set +a
 
+# Ensure every new Bash shell (including Claude's Bash tool) sources env vars
+if ! grep -q 'claude-code-env' /root/.bashrc 2>/dev/null; then
+  cat >> /root/.bashrc <<'BASHRC'
+# claude-code-env: source environment vars from setup
+set -a; source /etc/environment 2>/dev/null || true; set +a
+BASHRC
+fi
+
 # ── Detect Chromium ──────────────────────────────────────────────────────────
 PLAYWRIGHT_CHROMIUM=$(find /root/.cache/ms-playwright -name "chrome" -path "*/chrome-linux/chrome" 2>/dev/null | head -1)
 [ -z "$PLAYWRIGHT_CHROMIUM" ] && \
